@@ -1,0 +1,683 @@
+/* =========================================================================
+   Sistema de design no estilo Apple.
+
+   Nada aqui e valor aleatorio: cada espacamento, raio e tempo e uma escolha
+   que da pra defender (principio 7 da skill, "Craft").
+
+   Ordem do arquivo:
+     1. Fichas (cores, tipografia, espaco, profundidade)
+     2. Base
+     3. Camada translucida (chrome)
+     4. Secoes e grupos (listas agrupadas do iOS)
+     5. Controles
+     6. Lista de notas
+     7. Brindes (toasts) e folha de acao
+     8. Acessibilidade
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. FICHAS
+   ------------------------------------------------------------------------- */
+
+:root {
+  /* Cores do sistema, tema claro.
+     Os rotulos usam alfa em vez de cinza chapado: assim se adaptam ao que
+     estiver por tras, que e o que a Apple faz. */
+  --fundo:            #F2F2F7;   /* systemGroupedBackground */
+  --superficie:       #FFFFFF;   /* secondarySystemGroupedBackground */
+  --superficie-alta:  #FFFFFF;
+
+  --rotulo:           rgb(0 0 0 / 0.92);
+  --rotulo-2:         rgb(60 60 67 / 0.60);
+  --rotulo-3:         rgb(60 60 67 / 0.30);
+  --separador:        rgb(60 60 67 / 0.20);
+
+  --preenchimento:    rgb(120 120 128 / 0.12);
+  --preenchimento-2:  rgb(120 120 128 / 0.20);
+
+  --azul:             #007AFF;   /* systemBlue */
+  --vermelho:         #FF3B30;
+  --verde:            #34C759;
+  --laranja:          #FF9500;
+
+  /* Material: fundo semitransparente + borrao. A borda superior clara e a
+     luz batendo no material -- e o que faz parecer vidro e nao um retangulo
+     com opacidade. */
+  --material:         rgb(249 249 249 / 0.72);
+  --material-borda:   rgb(255 255 255 / 0.55);
+  --borrao:           blur(20px) saturate(180%);
+
+  /* Profundidade. Superficie maior le como mais espessa: sombra mais funda. */
+  --sombra-1: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.03);
+  --sombra-2: 0 4px 16px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.05);
+  --sombra-3: 0 -1px 40px rgb(0 0 0 / 0.14), 0 -1px 4px rgb(0 0 0 / 0.06);
+
+  /* Espaco em rem: se a pessoa aumentar o tamanho do texto no sistema,
+     o layout cresce junto em vez de quebrar (Dynamic Type). */
+  --e1: 0.25rem;
+  --e2: 0.5rem;
+  --e3: 0.75rem;
+  --e4: 1rem;
+  --e5: 1.5rem;
+  --e6: 2rem;
+  --e7: 2.75rem;
+
+  /* Raios: cantos generosos, no espirito do "continuous corner" da Apple. */
+  --raio-g: 1.125rem;   /* cartoes  */
+  --raio-m: 0.75rem;    /* botoes   */
+  --raio-p: 0.5rem;     /* fichinhas */
+  --raio-folha: 1.375rem;
+
+  /* Tempos curtos, so pra cor e pressao. Movimento de verdade e mola (JS). */
+  --t-pressao: 90ms;
+  --t-cor: 180ms;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo:            #000000;
+    --superficie:       #1C1C1E;
+    --superficie-alta:  #2C2C2E;
+
+    --rotulo:           rgb(255 255 255 / 0.94);
+    --rotulo-2:         rgb(235 235 245 / 0.60);
+    --rotulo-3:         rgb(235 235 245 / 0.30);
+    --separador:        rgb(84 84 88 / 0.60);
+
+    --preenchimento:    rgb(120 120 128 / 0.24);
+    --preenchimento-2:  rgb(120 120 128 / 0.36);
+
+    --azul:             #0A84FF;
+    --vermelho:         #FF453A;
+    --verde:            #30D158;
+    --laranja:          #FF9F0A;
+
+    --material:         rgb(30 30 32 / 0.72);
+    --material-borda:   rgb(255 255 255 / 0.10);
+
+    --sombra-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --sombra-2: 0 4px 16px rgb(0 0 0 / 0.5);
+    --sombra-3: 0 -1px 40px rgb(0 0 0 / 0.7);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   2. BASE
+   ------------------------------------------------------------------------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 var(--e4) calc(var(--e7) + env(safe-area-inset-bottom));
+  /* Fonte do sistema primeiro: no Mac/iPhone isso e a San Francisco, que ja
+     traz tamanho optico, tabela de tracking e ajuste de legibilidade prontos.
+     So valeria trocar com um motivo. */
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 1.0625rem;          /* 17px, o corpo do iOS */
+  line-height: 1.47;
+  letter-spacing: 0;             /* corpo fica perto de zero */
+  color: var(--rotulo);
+  background: var(--fundo);
+  max-width: 44rem;
+  margin-inline: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tracking e especifico do tamanho -- um valor unico esta errado em algum
+   lugar. Texto grande "abre" sozinho conforme cresce, entao fecha-se; texto
+   pequeno pede um respiro. */
+.titulo-grande {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 2.125rem);   /* 34px, Large Title */
+  line-height: 1.06;
+  letter-spacing: -0.021em;
+  font-weight: 700;
+}
+
+.cabecalho-secao {
+  margin: 0 0 var(--e2);
+  padding-inline: var(--e4);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  letter-spacing: 0.006em;       /* texto miudo pede tracking positivo */
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--rotulo-2);
+}
+.cabecalho-secao h2 {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.cabecalho-secao--com-acao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+}
+
+.etiqueta {
+  margin: var(--e1) 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  letter-spacing: 0.002em;
+  color: var(--rotulo-2);
+}
+.etiqueta--erro { color: var(--vermelho); }
+.etiqueta--ok   { color: var(--verde); }
+
+.nota-rodape {
+  margin: var(--e2) 0 0;
+  padding-inline: var(--e4);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: 0.005em;
+  color: var(--rotulo-2);
+  min-height: 1.2em;             /* reserva o espaco: nada pula ao aparecer */
+}
+.nota-rodape--erro { color: var(--vermelho); }
+.nota-rodape--ok   { color: var(--verde); }
+
+.oculto { display: none; }
+
+/* Some da tela mas continua existindo pro teclado e pro leitor de tela. */
+.oculto-visual {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Foco visivel e consistente em tudo que recebe teclado. */
+:where(button, input, textarea, select, label[for]):focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+   3. CAMADA TRANSLUCIDA
+   ------------------------------------------------------------------------- */
+
+.chrome {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-inline: calc(var(--e4) * -1);
+  padding: max(var(--e4), env(safe-area-inset-top)) var(--e4) var(--e3);
+  background: var(--material);
+  backdrop-filter: var(--borrao);
+  -webkit-backdrop-filter: var(--borrao);
+  border-bottom: 1px solid transparent;
+  /* Efeito de borda de rolagem: em vez de uma divisoria de 1px sempre ligada,
+     o material "aparece" so quando ha conteudo passando por baixo. */
+  transition: background var(--t-cor) ease-out,
+              border-color var(--t-cor) ease-out,
+              box-shadow var(--t-cor) ease-out;
+}
+.chrome[data-rolado="sim"] {
+  border-bottom-color: var(--separador);
+  box-shadow: 0 1px 12px rgb(0 0 0 / 0.06);
+}
+.chrome__interior { max-width: 44rem; margin-inline: auto; }
+
+/* -------------------------------------------------------------------------
+   4. SECOES E GRUPOS
+   ------------------------------------------------------------------------- */
+
+main { padding-top: var(--e5); }
+
+.secao { margin-bottom: var(--e6); }
+
+/* Cartao agrupado: a superficie que carrega as linhas. */
+.grupo {
+  background: var(--superficie);
+  border-radius: var(--raio-g);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+  min-height: 3.0625rem;         /* alvo de toque confortavel */
+  position: relative;
+}
+/* Separador que comeca depois do icone, como nas listas do iOS. */
+.linha + .linha::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--e4);
+  right: 0;
+  height: 1px;
+  background: var(--separador);
+  transform: scaleY(0.5);        /* fio de meio pixel em tela retina */
+  transform-origin: top;
+}
+
+.linha__texto { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.linha__titulo { font-size: 1.0625rem; line-height: 1.3; }
+.linha__detalhe {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  letter-spacing: 0.005em;
+  color: var(--rotulo-2);
+}
+.linha__seta { margin-left: auto; color: var(--rotulo-3); font-size: 1.3rem; }
+
+.linha__icone {
+  flex: none;
+  width: 1.875rem; height: 1.875rem;
+  display: grid; place-items: center;
+  border-radius: var(--raio-p);
+  background: var(--azul);
+  color: #fff;
+}
+.linha__icone svg { width: 1.1rem; height: 1.1rem; }
+
+/* Linha que e um botao: responde no APERTAR, nao no soltar. */
+.linha--acao {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-pressao) ease-out;
+}
+.linha--acao:active { background: var(--preenchimento); }
+
+.linha--controle { justify-content: space-between; }
+.linha--controle input[type="range"] { flex: 1; max-width: 13rem; }
+
+.linha--campo { gap: var(--e4); }
+.linha--campo label { flex: none; width: 5rem; color: var(--rotulo); }
+.linha--campo input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--rotulo);
+  padding: 0;
+}
+.linha--campo input::placeholder { color: var(--rotulo-3); }
+.linha--campo input:focus { outline: none; }
+.linha--campo:focus-within { background: var(--preenchimento); }
+
+.grupo--campo { padding: var(--e3) var(--e4); }
+
+/* -------------------------------------------------------------------------
+   5. CONTROLES
+   ------------------------------------------------------------------------- */
+
+.botao {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  width: 100%;
+  min-height: 3.0625rem;
+  padding: var(--e3) var(--e4);
+  border: none;
+  border-radius: var(--raio-m);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: -0.004em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* Feedback instantaneo no toque. Esperar o "click" pra reagir parece morto. */
+  transition: transform var(--t-pressao) ease-out,
+              background var(--t-pressao) ease-out,
+              opacity var(--t-cor) ease-out;
+}
+.botao:active:not(:disabled) { transform: scale(0.975); }
+.botao:disabled { opacity: 0.38; cursor: default; }
+
+.botao--principal { background: var(--azul); color: #fff; }
+.botao--principal:active:not(:disabled) { background: color-mix(in srgb, var(--azul) 86%, black); }
+
+.botao--destrutivo { background: var(--superficie); color: var(--vermelho); }
+.botao--neutro     { background: var(--superficie); color: var(--azul); }
+.botao--destrutivo:active, .botao--neutro:active { background: var(--preenchimento); }
+
+.botao--discreto {
+  width: auto;
+  min-height: 2rem;
+  padding: var(--e1) var(--e3);
+  background: var(--preenchimento);
+  color: var(--azul);
+  font-size: 0.9375rem;
+  border-radius: var(--raio-p);
+}
+.botao--discreto:active { background: var(--preenchimento-2); }
+
+/* Girador de carregamento: so aparece quando o botao esta ocupado. */
+.girador {
+  width: 1rem; height: 1rem;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: none;
+}
+.botao[data-ocupado="sim"] .girador { display: block; animation: girar 0.7s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Deslizador */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.75rem;
+  background: none;
+  cursor: grab;
+}
+input[type="range"]:active { cursor: grabbing; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--preenchimento-2);
+}
+input[type="range"]::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: var(--preenchimento-2);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.6rem; height: 1.6rem;
+  margin-top: -0.675rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--sombra-2);
+  transition: transform var(--t-pressao) ease-out;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 1.6rem; height: 1.6rem;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--sombra-2);
+}
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+
+/* Chave liga/desliga */
+.chave {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 3.1875rem; height: 1.9375rem;
+  border-radius: 999px;
+  background: var(--preenchimento-2);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--t-cor) ease-out;
+}
+.chave::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 1.6875rem; height: 1.6875rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--sombra-1);
+  /* Curva assimetrica: sai rapido, assenta devagar. */
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.chave:checked { background: var(--verde); }
+.chave:checked::after { transform: translateX(1.25rem); }
+
+/* Area de texto */
+textarea {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--rotulo);
+  resize: vertical;
+  padding: 0;
+}
+textarea:focus { outline: none; }
+textarea::placeholder { color: var(--rotulo-3); }
+
+/* Seletor */
+.seletor {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: var(--preenchimento);
+  color: var(--azul);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: var(--e1) 1.7rem var(--e1) var(--e3);
+  border-radius: var(--raio-p);
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 0.8rem center, right 0.55rem center;
+  background-size: 0.3rem 0.3rem, 0.3rem 0.3rem;
+  background-repeat: no-repeat;
+}
+
+/* Palco da foto */
+.palco { margin-top: var(--e3); display: flex; flex-direction: column; gap: var(--e3); }
+.palco__moldura {
+  border-radius: var(--raio-g);
+  overflow: hidden;
+  background: var(--superficie);
+  box-shadow: var(--sombra-2);
+  line-height: 0;
+}
+canvas { max-width: 100%; height: auto; display: block; }
+
+/* -------------------------------------------------------------------------
+   6. LISTA DE NOTAS
+   ------------------------------------------------------------------------- */
+
+.lista__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--e1) var(--e3);
+  padding: var(--e3) var(--e4);
+  position: relative;
+}
+.lista__item + .lista__item::before {
+  content: "";
+  position: absolute;
+  top: 0; left: var(--e4); right: 0;
+  height: 1px;
+  background: var(--separador);
+  transform: scaleY(0.5);
+  transform-origin: top;
+}
+
+.lista__titulo {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.004em;
+  line-height: 1.3;
+}
+.lista__meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  font-size: 0.8125rem;
+  letter-spacing: 0.005em;
+  color: var(--rotulo-2);
+}
+.ficha {
+  background: var(--preenchimento);
+  color: var(--rotulo-2);
+  border-radius: var(--raio-p);
+  padding: 0.05rem var(--e2);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.lista__previa {
+  grid-column: 1 / -1;
+  margin: var(--e1) 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--rotulo-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.lista__acoes { display: flex; gap: var(--e2); align-self: start; }
+.lista__vazia {
+  padding: var(--e5) var(--e4);
+  text-align: center;
+  color: var(--rotulo-2);
+  font-size: 0.9375rem;
+}
+
+/* -------------------------------------------------------------------------
+   7. BRINDES E FOLHA
+   ------------------------------------------------------------------------- */
+
+.brindes {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(var(--e4) + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  pointer-events: none;
+  padding-inline: var(--e4);
+}
+.brinde {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  max-width: 26rem;
+  padding: var(--e3) var(--e4);
+  border-radius: 999px;
+  /* Material: chega como vidro, nao como retangulo opaco. */
+  background: var(--material);
+  backdrop-filter: var(--borrao);
+  -webkit-backdrop-filter: var(--borrao);
+  border: 1px solid var(--material-borda);
+  box-shadow: var(--sombra-2);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  /* Vibrancia: sobre material, texto chapado some. Peso um pouco maior e
+     tracking levemente aberto seguram a legibilidade. */
+  letter-spacing: 0.004em;
+  color: var(--rotulo);
+  will-change: transform, opacity;
+}
+.brinde__ponto { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex: none; }
+.brinde--ok  .brinde__ponto { background: var(--verde); }
+.brinde--erro .brinde__ponto { background: var(--vermelho); }
+.brinde--aviso .brinde__ponto { background: var(--laranja); }
+
+/* Folha: tarefa modal, entao acompanha um veu que escurece e empurra o
+   fundo pra tras. */
+.folha { position: fixed; inset: 0; z-index: 50; }
+.folha__veu {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+  will-change: opacity;
+}
+.folha__painel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: var(--e2) var(--e4) calc(var(--e4) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  background: var(--superficie);
+  border-radius: var(--raio-folha) var(--raio-folha) 0 0;
+  box-shadow: var(--sombra-3);
+  touch-action: none;            /* o arrasto e nosso, nao da rolagem */
+  will-change: transform;
+}
+.folha__pegador {
+  width: 2.25rem; height: 0.3125rem;
+  border-radius: 999px;
+  background: var(--rotulo-3);
+  margin: var(--e1) auto var(--e2);
+}
+.folha__titulo {
+  margin: 0;
+  text-align: center;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.004em;
+}
+.folha__texto {
+  margin: 0 0 var(--e2);
+  text-align: center;
+  font-size: 0.8125rem;
+  letter-spacing: 0.005em;
+  color: var(--rotulo-2);
+}
+.folha .botao { background: var(--preenchimento); }
+.folha .botao--destrutivo { color: var(--vermelho); }
+.folha .botao--neutro { color: var(--azul); font-weight: 600; }
+
+/* -------------------------------------------------------------------------
+   8. ACESSIBILIDADE
+   Tres sinais independentes -- cada um pede uma resposta diferente.
+   ------------------------------------------------------------------------- */
+
+/* Menos movimento nao quer dizer nenhum retorno: quer dizer um equivalente
+   suave, que nao mexe com o labirinto do ouvido. Fica a opacidade e a cor,
+   sai o deslocamento e o quique. (O motor de molas tambem respeita isto.) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .botao:active:not(:disabled) { transform: none; }
+  .chave::after { transition: none; }
+}
+
+/* Menos transparencia: material vira quase solido e o borrao sai. */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome, .brinde {
+    background: var(--superficie);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .brinde { border-color: var(--separador); }
+}
+
+/* Mais contraste: fundo solido e borda definida. */
+@media (prefers-contrast: more) {
+  :root {
+    --rotulo-2: rgb(60 60 67 / 0.85);
+    --separador: rgb(60 60 67 / 0.55);
+  }
+  .grupo, .brinde, .folha__painel { border: 1px solid var(--separador); }
+  .chrome { background: var(--superficie); backdrop-filter: none; }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --rotulo-2: rgb(235 235 245 / 0.85);
+    --separador: rgb(235 235 245 / 0.45);
+  }
+}

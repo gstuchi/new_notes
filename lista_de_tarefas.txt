@@ -1,0 +1,214 @@
+========================================================
+  PROJETO: NOTAS -> PDF  (Digitalizador de Caderno)
+========================================================
+
+Autor: Gzao
+Status: Prototipo funcionando (Fases 1-5 de pe)
+Data de inicio: _14_/_08_/_2026__
+
+--------------------------------------------------------
+1. A IDEIA (em uma frase)
+--------------------------------------------------------
+Um app onde eu abro, tiro foto das minhas anotacoes de
+caderno, e ele transforma isso num PDF bonito, organizado
+e digitalizado (texto de verdade, nao so a foto).
+As notas ficam separadas por ASSUNTO (Calculo, Fisica,
+Ingles...), e em cada assunto eu escolho o ESTILO do
+resumo (minimalista, tecnologico, infantil, etc).
+
+
+--------------------------------------------------------
+2. O FLUXO (o caminho da foto ate o PDF)
+--------------------------------------------------------
+[1] Tirar / escolher a foto da nota
+        |
+        v
+[2] Melhorar a imagem (corte, contraste, endireitar)
+        |
+        v
+[3] Ler o que esta escrito na foto  (OCR / Vision AI)
+        |
+        v
+[4] Limpar e organizar o texto (titulos, paragrafos)
+        |
+        v
+[5] Gerar o PDF final bonito
+        |
+        v
+[6] Salvar / compartilhar
+
+
+--------------------------------------------------------
+3. DECISAO IMPORTANTE: como "ler" a letra manuscrita
+--------------------------------------------------------
+- OCR classico (Tesseract): otimo pra texto IMPRESSO,
+  ruim pra letra de mao. Nao recomendado como principal.
+
+- Vision AI (Anthropic API, Google Cloud Vision, etc):
+  entende letra manuscrita muito melhor. Recomendado.
+
+>> DECIDIR: qual vou usar no comeco? Vision AI da Anthropic
+   (modelo claude-opus-5), chamada via SDK oficial. Falta so
+   criar a conta e por a chave no arquivo .env.
+
+
+--------------------------------------------------------
+4. STACK (ferramentas) - rascunho, ainda pode mudar
+--------------------------------------------------------
+Opcao A - Prototipo rapido em Python (so pra testar a ideia):
+    - Python
+    - Biblioteca de imagem: Pillow / OpenCV
+    - Leitura da letra: Vision AI
+    - Gerar PDF: ReportLab ou FPDF
+
+Opcao B - App de verdade no celular (ja que eu conheco):
+    - Flutter / Dart
+    - Camera: package "camera" ou "image_picker"
+    - Gerar PDF: package "pdf"
+    - Leitura da letra: chamada pra Vision AI
+
+>> ESTRATEGIA: comecar pela Opcao A pra validar,
+   depois migrar pra Opcao B. (marcar aqui a decisao)
+
+>> DECIDIDO (14/08/2026): o prototipo saiu em JavaScript
+   (Node) em vez de Python, porque nao ha Python instalado
+   nesta maquina e o Node ja estava. O papel e o mesmo da
+   Opcao A: validar a ideia rapido. O plano continua sendo
+   migrar pro app de celular (Opcao B) depois.
+   O prototipo roda como um site local: "npm start" e abrir
+   http://localhost:3000 no navegador.
+
+
+--------------------------------------------------------
+4.1. LINGUAGENS RECOMENDADAS (pesquisa 2026)
+--------------------------------------------------------
+IMPORTANTE: a linguagem quase NAO afeta a qualidade da
+leitura da letra. A leitura acontece na Vision AI (fora
+do meu codigo). Eu so mando a foto e recebo o texto.
+Logo, escolho a linguagem pela parte que fica do MEU lado:
+camera, tratar imagem, gerar PDF e fazer as telas.
+
+Confirmado por benchmark 2026 (letra manuscrita):
+- Vision AI (Claude, GPT, Google, Azure) = melhores.
+- Tesseract / OCR classico = pessimo em letra de mao.
+
+--- PRA O PROTOTIPO (testar a ideia rapido) ---
+>> PYTHON  (recomendado pra comecar)
+   - Melhor ecossistema pra imagem: Pillow, OpenCV
+   - Gerar PDF facil: ReportLab, FPDF
+   - Chamar Vision AI: poucas linhas
+   - Rapido de escrever e testar. Ja conheco.
+
+--- PRA O APP DE VERDADE (celular) ---
+>> DART / FLUTTER  (recomendado pro app - ja conheco)
+   - UM codigo so roda em Android e iOS
+   - Camera: package "camera" / "image_picker"
+   - PDF: package "pdf"
+   - Chamar Vision AI: requisicao HTTP normal
+
+>> ALTERNATIVA: JavaScript/TypeScript + React Native
+   - Tambem faz Android + iOS com um codigo
+   - So se eu preferir o mundo JS. (ja conheco tbm)
+
+--- LINGUAGENS QUE EU CONHECO MAS NAO ENCAIXAM BEM ---
+- Java: da pra fazer, mas verboso e sem vantagem aqui.
+- C: baixo nivel demais pra esse tipo de projeto.
+
+>> DECISAO FINAL:
+   Prototipo em: JavaScript / Node (motivo acima)
+   App em: Flutter / Dart (ainda a fazer)
+
+
+--------------------------------------------------------
+5. ASSUNTOS E ESTILOS (como isso funciona)
+--------------------------------------------------------
+IDEIA-CHAVE: a IA le a foto e devolve TEXTO PURO
+(so as palavras, sem aparencia). Esse texto e o
+"ingrediente cru". Depois eu "visto" ele com o estilo
+que quiser. O mesmo texto vira mil PDFs diferentes.
+-> Leio a caligrafia UMA vez, estilizo N vezes.
+
+ASSUNTOS = organizacao (gavetas):
+  - Cada nota entra numa pasta/assunto (Calculo, Fisica...)
+  - Isso e programacao pura, nao usa IA.
+
+ESTILOS = "temas"/"skins" do PDF (mesmo texto, roupa nova):
+  - Minimalista: fonte fina, muito branco, preto e branco
+  - Tecnologico: fonte tipo terminal, azul/verde neon
+  - Infantil: fonte redonda, cores vivas, uns desenhos
+  - (cada estilo = um template de PDF)
+
+>> REGRA DE OURO: estilo e a parte mais divertida E a mais
+   perigosa. E a "decoracao da casa" -> so depois da casa
+   de pe. NAO deixar isso furar a fila (ver ordem abaixo).
+
+
+--------------------------------------------------------
+6. LISTA DE TAREFAS
+--------------------------------------------------------
+
+## Fase 0 - Preparacao
+[x] Definir nome do projeto        -> "Notas -> PDF" (pasta new_notes)
+[ ] Criar repositorio no GitHub
+[x] Escolher a stack (Opcao A ou B) -> Opcao A, em Node (ver 4.1)
+[ ] Decidir qual Vision AI vou usar e criar a conta/chave
+    (decidido: Anthropic. Falta criar a conta e por a chave no .env)
+
+## Fase 1 - Prova de conceito (o coracao do projeto)
+[ ] Conseguir ler UMA foto e extrair o texto certo
+    (o codigo esta pronto em lib/vision.js, mas so da pra
+     testar de verdade depois que a chave existir)
+[ ] Testar com 3 letras diferentes (minha, mais 2)
+[ ] Ver a qualidade: acerta bem? o que falha?
+
+## Fase 2 - Melhorar a imagem antes de ler
+[ ] Corte automatico / endireitar a foto
+    (por enquanto so tem giro manual de 90 em 90 graus)
+[x] Aumentar contraste (deixar letra mais legivel)
+    (contraste + brilho + preto-e-branco, ao vivo, antes de ler)
+
+## Fase 3 - Gerar o PDF (feio mesmo, so pra funcionar)
+[x] Montar um PDF simples com o texto extraido
+[x] Titulo, data, paragrafos organizados
+[x] Opcao de PDF com o texto + a foto original junto
+
+## Fase 4 - Organizar por ASSUNTO
+[x] Criar a ideia de pastas/assuntos
+[x] Ao salvar uma nota, escolher em qual assunto ela entra
+[x] Listar as notas de cada assunto
+
+## Fase 5 - Interface / App
+[x] Tela pra tirar ou escolher a foto
+[x] Botao "gerar PDF"
+[x] Tela de preview antes de salvar
+    (o texto lido aparece editavel antes de salvar)
+[x] Salvar / compartilhar o PDF
+    (o PDF baixa; compartilhar de verdade fica pro app do celular)
+
+## Fase 6 - ESTILOS (a decoracao - so depois da casa de pe)
+[ ] Criar 1 estilo simples primeiro (ex: minimalista)
+[ ] Transformar esse estilo num "template" reaproveitavel
+[ ] Adicionar os outros estilos (tecnologico, infantil...)
+[ ] Deixar escolher o estilo por assunto
+
+## Fase 7 - Extras (se der tempo)
+[ ] Busca dentro das notas (por ser texto de verdade)
+[ ] Exportar em .docx tambem, nao so PDF
+
+
+--------------------------------------------------------
+6. RISCOS / COISAS PRA FICAR DE OLHO
+--------------------------------------------------------
+- Letra muito ruim pode confundir a IA -> testar cedo.
+- Custo da Vision AI (algumas cobram por foto).
+- Foto tremida / mal iluminada estraga o resultado.
+
+
+--------------------------------------------------------
+7. ANOTACOES LIVRES
+--------------------------------------------------------
+(escreve aqui ideias soltas que forem aparecendo)
+
+
+
+========================================================

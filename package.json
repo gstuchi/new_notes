@@ -1,0 +1,18 @@
+{
+  "name": "new-notes",
+  "version": "0.1.0",
+  "description": "Notas -> PDF: fotografa anotacoes manuscritas, extrai o texto com Vision AI e gera PDF organizado por assunto",
+  "type": "module",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js",
+    "test": "node testes/teste.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true
+}
