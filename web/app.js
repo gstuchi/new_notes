@@ -9,8 +9,22 @@
 // voo. Onde o dedo participa, quem manda e o motor de molas (mola.js).
 
 import { animarMola, projetar, elastico, RastroDeVelocidade, GAVETA, PADRAO } from './mola.js';
+import { exigirSessao, encerrarSessao, primeiroNome } from './autenticacao.js';
 
 const $ = (id) => document.getElementById(id);
+
+// Guarda de tela (mockup): sem sessao, exigirSessao ja mandou a pagina pro
+// login. Aqui so travamos o modulo para nada mais ser montado enquanto a
+// troca de pagina acontece -- uma promessa que nunca resolve para o resto do
+// arquivo nunca rodar, e sem erro vermelho no console.
+const usuario = exigirSessao();
+if (!usuario) await new Promise(() => {});
+
+// Mesma guarda para a volta pelo bfcache: o navegador restaura a pagina sem
+// rodar o modulo, entao quem saiu e apertou "voltar" veria o app de novo.
+window.addEventListener('pageshow', (evento) => {
+  if (evento.persisted) exigirSessao();
+});
 
 const estado = {
   imagemOriginal: null,
@@ -497,12 +511,22 @@ function formatarData(iso) {
 // ===========================================================================
 
 (async () => {
+  $('saudacao').textContent = `Ola, ${primeiroNome(usuario.nome) || usuario.email}.`;
+  $('sair').addEventListener('click', () => {
+    encerrarSessao();
+    location.replace('/login.html');
+  });
+
   const estadoServidor = await (await fetch('/api/estado')).json();
   const aviso = $('estado');
 
   if (estadoServidor.chaveConfigurada) {
     aviso.className = 'etiqueta';
-    aviso.textContent = 'Fotografe, leia a letra, gere o PDF.';
+    // Dizer QUEM esta lendo: com duas chaves no .env o Gemini atende, e a conta
+    // chega no lugar errado se voce achar que era a outra.
+    const quem = estadoServidor.provedor === 'gemini' ? 'Gemini' : 'Anthropic';
+    aviso.textContent = `Fotografe, leia a letra, gere o PDF. Lendo com ${quem}`
+      + (estadoServidor.modelo ? ` (${estadoServidor.modelo}).` : '.');
   } else {
     aviso.className = 'etiqueta etiqueta--erro';
     aviso.textContent = 'Sem chave da Vision AI: da pra digitar o texto a mao e gerar o PDF, '

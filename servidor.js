@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { lerCaligrafia, chaveConfigurada } from './lib/vision.js';
+import { lerCaligrafia, chaveConfigurada, provedor, modelo } from './lib/vision.js';
 import { gerarPdf } from './lib/pdf.js';
 import {
   listarNotas, buscarNota, salvarNota, atualizarNota,
@@ -118,7 +118,8 @@ async function rotear(req, res) {
   if (caminho === '/api/estado' && metodo === 'GET') {
     return responderJson(res, 200, {
       chaveConfigurada: chaveConfigurada(),
-      modelo: process.env.MODELO_VISION || 'claude-opus-5',
+      provedor: provedor(),
+      modelo: modelo(),
     });
   }
 

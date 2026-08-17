@@ -149,10 +149,12 @@ ESTILOS = "temas"/"skins" do PDF (mesmo texto, roupa nova):
 
 ## Fase 0 - Preparacao
 [x] Definir nome do projeto        -> "Notas -> PDF" (pasta new_notes)
-[ ] Criar repositorio no GitHub
+[x] Criar repositorio no GitHub    -> github.com/gstuchi/new_notes (branch main)
 [x] Escolher a stack (Opcao A ou B) -> Opcao A, em Node (ver 4.1)
 [ ] Decidir qual Vision AI vou usar e criar a conta/chave
-    (decidido: Anthropic. Falta criar a conta e por a chave no .env)
+    (decidido: os DOIS atendidos pelo mesmo codigo. Gemini e o padrao por ter
+     cota gratuita; Anthropic continua valendo. Falta so pegar a chave gratuita
+     em aistudio.google.com/apikey e por GEMINI_API_KEY no .env)
 
 ## Fase 1 - Prova de conceito (o coracao do projeto)
 [ ] Conseguir ler UMA foto e extrair o texto certo
@@ -208,6 +210,14 @@ ESTILOS = "temas"/"skins" do PDF (mesmo texto, roupa nova):
 7. ANOTACOES LIVRES
 --------------------------------------------------------
 (escreve aqui ideias soltas que forem aparecendo)
+
+- Telas de login e cadastro (14/08/2026): feitas como MOCKUP pra
+  demonstracao, nao como fase do plano. Arquivos: web/login.html,
+  web/cadastro.html, web/entrada.js e web/autenticacao.js.
+  Usuario e sessao ficam no localStorage do navegador, senha em texto
+  legivel. Nao protege a API: /api/notas continua aberto pra quem
+  digitar a URL. Login de verdade so quando virar app (Flutter) e
+  tiver servidor de contas.
 
 
 

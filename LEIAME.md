@@ -29,22 +29,33 @@ Para parar o servidor: `Ctrl+C` na janela do terminal.
 Sem chave o app abre e funciona — você consegue digitar o texto à mão, salvar,
 organizar por assunto e gerar PDF. **Só a leitura automática da foto não funciona.**
 
-Para ligar a leitura automática:
+Dá pra usar **Gemini** (tem cota gratuita) ou **Anthropic** (paga por foto).
+Basta uma das duas chaves.
 
-1. Crie uma conta e uma chave em https://console.anthropic.com
+**Caminho recomendado — Gemini, de graça:**
+
+1. Pegue uma chave em https://aistudio.google.com/apikey (login com conta Google)
 2. Copie o arquivo `.env.example` para `.env`
 3. Coloque sua chave lá dentro:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
 ```
 
 4. Reinicie o servidor (`Ctrl+C` e `npm start` de novo)
 
+Com Anthropic é igual, trocando a linha por `ANTHROPIC_API_KEY=sk-ant-...`
+(chave em https://console.anthropic.com).
+
+Se as duas chaves estiverem no `.env`, **o Gemini atende** — é o que tem cota
+grátis. Para decidir na mão, ponha `PROVEDOR_VISION=gemini` ou `=anthropic`.
+Assim que o app abre, a linha embaixo do título diz quem está lendo.
+
 O `.env` está no `.gitignore` — ele nunca vai pro GitHub.
 
-> **Custo:** cada foto lida é uma chamada paga. Uma foto de caderno custa alguns
-> centavos. Esse era um dos riscos anotados no plano — vale acompanhar.
+> **Custo:** o Gemini tem cota grátis por dia, e estourando a cota ele recusa em
+> vez de cobrar. Já a Anthropic cobra por foto lida — alguns centavos cada. Esse
+> era um dos riscos anotados no plano — vale acompanhar.
 
 ---
 
@@ -65,9 +76,9 @@ O `.env` está no `.gitignore` — ele nunca vai pro GitHub.
 npm test
 ```
 
-23 testes cobrem o gerador de PDF (estrutura, acentos, quebra de linha,
-paginação, foto embutida), a física das molas da interface e o armazenamento.
-Eles **não** chamam a API paga.
+31 testes cobrem o gerador de PDF (estrutura, acentos, quebra de linha,
+paginação, foto embutida), a física das molas da interface, o armazenamento e a
+escolha do provedor de Vision AI. Eles **não** chamam a API paga.
 
 O teste também deixa um PDF de exemplo em `testes/saida/exemplo.pdf` para você
 abrir e conferir com o olho.

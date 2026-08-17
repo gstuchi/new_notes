@@ -12,7 +12,8 @@
      5. Controles
      6. Lista de notas
      7. Brindes (toasts) e folha de acao
-     8. Acessibilidade
+     8. Entrada (login e cadastro)
+     9. Acessibilidade
    ========================================================================= */
 
 /* -------------------------------------------------------------------------
@@ -226,6 +227,14 @@ body {
   box-shadow: 0 1px 12px rgb(0 0 0 / 0.06);
 }
 .chrome__interior { max-width: 44rem; margin-inline: auto; }
+
+/* Titulo de um lado, "Sair" do outro. */
+.cabecalho-usuario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+}
 
 /* -------------------------------------------------------------------------
    4. SECOES E GRUPOS
@@ -639,7 +648,73 @@ canvas { max-width: 100%; height: auto; display: block; }
 .folha .botao--neutro { color: var(--azul); font-weight: 600; }
 
 /* -------------------------------------------------------------------------
-   8. ACESSIBILIDADE
+   8. ENTRADA (login e cadastro)
+   Tela unica, centrada, sem nada rolando por baixo. Reaproveita .grupo e
+   .linha--campo -- a lista agrupada do iOS ja e a cara certa pra formulario.
+   ------------------------------------------------------------------------- */
+
+/* A tela de entrada centra sozinha e nao tem lista comprida embaixo: o
+   respiro extra do rodape do app so atrapalharia a centralizacao. */
+.corpo-entrada {
+  max-width: none;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.entrada {
+  min-height: 100svh;
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entrada__cartao {
+  width: 100%;
+  max-width: 24rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  padding-block: var(--e6);
+  /* Sem transition: quem mexe neste transform e a mola do erro (entrada.js). */
+  will-change: transform;
+}
+
+.entrada__topo { text-align: center; }
+.entrada__topo .titulo-grande { margin-bottom: var(--e1); }
+
+.entrada__apoio {
+  margin: 0;
+  color: var(--rotulo-2);
+  font-size: 0.9375rem;
+  letter-spacing: 0.003em;   /* texto miudo pede um respiro */
+}
+
+/* "Confirmar" nao cabe nos 5rem padrao do rotulo de linha. */
+.entrada .linha--campo label { width: 6rem; }
+
+.entrada .nota-rodape { margin: 0; text-align: center; }
+
+.entrada__troca {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--rotulo-2);
+}
+.entrada__troca a {
+  color: var(--azul);
+  text-decoration: none;
+  font-weight: 600;
+  padding: var(--e1) var(--e2);   /* alvo de toque, nao so o texto */
+  border-radius: var(--raio-p);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-pressao) ease-out;
+}
+.entrada__troca a:active { background: var(--preenchimento); }
+
+.entrada__aviso { color: var(--rotulo-3); }
+
+/* -------------------------------------------------------------------------
+   9. ACESSIBILIDADE
    Tres sinais independentes -- cada um pede uma resposta diferente.
    ------------------------------------------------------------------------- */
 
@@ -654,6 +729,9 @@ canvas { max-width: 100%; height: auto; display: block; }
   }
   .botao:active:not(:disabled) { transform: none; }
   .chave::after { transition: none; }
+  /* O motor de molas ja nao sacode o cartao da entrada; isto so garante que
+     nenhum resto de transform fique pendurado. */
+  .entrada__cartao { transform: none !important; }
 }
 
 /* Menos transparencia: material vira quase solido e o borrao sai. */
@@ -674,6 +752,10 @@ canvas { max-width: 100%; height: auto; display: block; }
   }
   .grupo, .brinde, .folha__painel { border: 1px solid var(--separador); }
   .chrome { background: var(--superficie); backdrop-filter: none; }
+  /* Campo sem borda depende do contraste do fundo -- aqui ele ganha uma. */
+  .entrada .linha--campo + .linha--campo { border-top: 1px solid var(--separador); }
+  .entrada__troca a { text-decoration: underline; }
+  .entrada__aviso { color: var(--rotulo-2); }
 }
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   :root {

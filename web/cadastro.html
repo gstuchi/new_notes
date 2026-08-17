@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>Criar conta &mdash; Notas</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body class="corpo-entrada">
+
+  <main class="entrada">
+    <div class="entrada__cartao" id="cartao">
+
+      <header class="entrada__topo">
+        <h1 class="titulo-grande">Criar conta</h1>
+        <p class="entrada__apoio">S&oacute; pra dar nome a quem est&aacute; usando.</p>
+      </header>
+
+      <form class="grupo" id="formCadastrar" novalidate>
+        <div class="linha linha--campo">
+          <label for="nome">Nome</label>
+          <input type="text" id="nome" name="nome"
+                 autocomplete="name" placeholder="Como quer ser chamado" required>
+        </div>
+        <div class="linha linha--campo">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email"
+                 inputmode="email" autocomplete="email" autocapitalize="off"
+                 spellcheck="false" placeholder="voce@exemplo.com" required>
+        </div>
+        <div class="linha linha--campo">
+          <label for="senha">Senha</label>
+          <input type="password" id="senha" name="senha"
+                 autocomplete="new-password" placeholder="crie uma senha" required>
+        </div>
+        <div class="linha linha--campo">
+          <label for="confirmar">Confirmar</label>
+          <input type="password" id="confirmar" name="confirmar"
+                 autocomplete="new-password" placeholder="a mesma senha" required>
+        </div>
+      </form>
+
+      <p class="nota-rodape nota-rodape--erro" id="erro" role="alert" hidden></p>
+
+      <button type="submit" form="formCadastrar" class="botao botao--principal">Criar conta</button>
+
+      <p class="entrada__troca">
+        J&aacute; tem conta?
+        <a href="/login.html">Entrar</a>
+      </p>
+
+      <p class="nota-rodape entrada__aviso">
+        Demonstra&ccedil;&atilde;o: a conta fica guardada s&oacute; neste navegador,
+        em texto leg&iacute;vel. N&atilde;o use uma senha de verdade.
+      </p>
+
+    </div>
+  </main>
+
+  <script src="/entrada.js" type="module"></script>
+</body>
+</html>

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { gerarPdf, quebrarLinhas, larguraTexto, dimensoesJpeg } from '../lib/pdf.js';
 import { projetar, elastico, RastroDeVelocidade } from '../web/mola.js';
 import { listarNotas, salvarNota, buscarNota, atualizarNota, apagarNota, listarAssuntos } from '../lib/armazenamento.js';
+import { textoDaResposta, provedor, modelo, chaveConfigurada, lerCaligrafia } from '../lib/vision.js';
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const SAIDA = path.join(RAIZ, 'testes', 'saida');
@@ -313,6 +314,95 @@ await teste('campos vazios recebem valores padrao', async () => {
   assert.equal(nota.titulo, 'Sem titulo');
   assert.equal(nota.assunto, 'Sem assunto');
   await apagarNota(nota.id);
+});
+
+// --- escolha do provedor de Vision AI (lib/vision.js) -----------------------
+// Nada aqui toca a rede: so a decisao de QUEM atende e a leitura da resposta.
+
+const VARIAVEIS = ['GEMINI_API_KEY', 'ANTHROPIC_API_KEY', 'PROVEDOR_VISION', 'MODELO_VISION'];
+
+/** Roda fn com o ambiente trocado e devolve tudo como estava depois. */
+function comAmbiente(valores, fn) {
+  const antes = {};
+  for (const nome of VARIAVEIS) {
+    antes[nome] = process.env[nome];
+    delete process.env[nome];
+  }
+  try {
+    for (const [nome, valor] of Object.entries(valores)) process.env[nome] = valor;
+    return fn();
+  } finally {
+    for (const nome of VARIAVEIS) {
+      if (antes[nome] === undefined) delete process.env[nome];
+      else process.env[nome] = antes[nome];
+    }
+  }
+}
+
+await teste('sem chave nenhuma nao ha provedor', () => {
+  comAmbiente({}, () => {
+    assert.equal(provedor(), null);
+    assert.equal(modelo(), null);
+    assert.equal(chaveConfigurada(), false);
+  });
+});
+
+await teste('cada chave escolhe seu provedor, e com as duas o Gemini ganha', () => {
+  comAmbiente({ GEMINI_API_KEY: 'x' }, () => assert.equal(provedor(), 'gemini'));
+  comAmbiente({ ANTHROPIC_API_KEY: 'x' }, () => assert.equal(provedor(), 'anthropic'));
+  comAmbiente({ GEMINI_API_KEY: 'x', ANTHROPIC_API_KEY: 'y' }, () => {
+    assert.equal(provedor(), 'gemini', 'o gratuito tem que atender primeiro');
+  });
+});
+
+await teste('PROVEDOR_VISION manda mais que a ordem das chaves', () => {
+  comAmbiente({ GEMINI_API_KEY: 'x', ANTHROPIC_API_KEY: 'y', PROVEDOR_VISION: 'anthropic' }, () => {
+    assert.equal(provedor(), 'anthropic');
+  });
+  // Valor sem sentido nao pode virar provedor: cai na ordem normal.
+  comAmbiente({ GEMINI_API_KEY: 'x', PROVEDOR_VISION: 'nada-disso' }, () => {
+    assert.equal(provedor(), 'gemini');
+  });
+});
+
+await teste('modelo padrao vem do provedor, e MODELO_VISION sobrescreve', () => {
+  comAmbiente({ GEMINI_API_KEY: 'x' }, () => assert.equal(modelo(), 'gemini-3.6-flash'));
+  comAmbiente({ ANTHROPIC_API_KEY: 'x' }, () => assert.equal(modelo(), 'claude-opus-5'));
+  comAmbiente({ GEMINI_API_KEY: 'x', MODELO_VISION: 'outro-modelo' }, () => {
+    assert.equal(modelo(), 'outro-modelo');
+  });
+});
+
+await teste('sem chave, lerCaligrafia falha com codigo SEM_CHAVE (nao chama a rede)', async () => {
+  await comAmbiente({}, async () => {
+    await assert.rejects(
+      () => lerCaligrafia('AAAA', 'image/jpeg'),
+      (erro) => erro.codigo === 'SEM_CHAVE',
+    );
+  });
+});
+
+await teste('resposta do Gemini: output_text e o caminho normal', () => {
+  assert.equal(textoDaResposta({ output_text: '  Derivadas\n\nRegra da cadeia  ' }),
+    'Derivadas\n\nRegra da cadeia');
+});
+
+await teste('resposta do Gemini: sem output_text, junta os blocos dos passos', () => {
+  const resposta = {
+    output_text: '',
+    steps: [
+      { type: 'model_output', content: [{ type: 'text', text: 'primeira linha' }] },
+      { type: 'model_output', content: [{ type: 'text', text: 'segunda linha' }, { type: 'image' }] },
+    ],
+  };
+  assert.equal(textoDaResposta(resposta), 'primeira linha\nsegunda linha');
+});
+
+await teste('resposta vazia ou estranha vira string vazia, nunca excecao', () => {
+  assert.equal(textoDaResposta(null), '');
+  assert.equal(textoDaResposta('texto solto'), '');
+  assert.equal(textoDaResposta({}), '');
+  assert.equal(textoDaResposta({ steps: 'nao e lista' }), '');
 });
 
 // --- resultado --------------------------------------------------------------
