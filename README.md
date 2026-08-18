@@ -35,7 +35,9 @@ O caminho que a foto percorre até virar PDF:
 [6] Salvar / compartilhar
 ```
 
-**Ideia-chave:** a IA lê a foto e devolve **texto puro** — só as palavras, sem aparência. Esse texto é o "ingrediente cru". A partir dele, o mesmo conteúdo pode virar vários PDFs diferentes. Ou seja: **lê a caligrafia uma vez, estiliza N vezes.**
+**Ideia-chave:** a IA identifica texto, listas, tabelas e mapas mentais. O conteúdo continua editável, mas relações como tema central, ramos e conexões são preservadas. Assim, a mesma leitura pode gerar um resumo hierárquico ou um mapa visual sem chamar a IA novamente.
+
+A interface organiza o fluxo em **Pastas → Notas → Editor**, inspirada no Apple Notes em modo escuro, com o laranja-terra do Claude como cor de ação.
 
 ---
 

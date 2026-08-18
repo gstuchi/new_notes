@@ -3,127 +3,155 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/png" href="/icone-notas.png">
+  <link rel="apple-touch-icon" href="/icone-notas.png">
   <title>Notas</title>
   <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
 
-  <!-- Camada translucida flutuante: o conteudo rola por baixo dela.
-       O efeito de borda (sombra + borrao) so aparece quando ha conteudo
-       passando embaixo -- nada de divisoria de 1px sempre visivel. -->
-  <header class="chrome" id="chrome">
-    <div class="chrome__interior">
-      <div class="cabecalho-usuario">
-        <h1 class="titulo-grande">Notas</h1>
-        <button type="button" id="sair" class="botao botao--discreto">Sair</button>
+  <main id="aplicativo" class="aplicativo">
+    <section id="telaPastas" class="tela tela--ativa" aria-labelledby="tituloPastas">
+      <header class="topo-app">
+        <div>
+          <p class="topo-app__contexto" id="saudacao"></p>
+          <h1 id="tituloPastas">Pastas</h1>
+          <p class="topo-app__estado" id="estado"></p>
+        </div>
+        <button type="button" id="sair" class="controle-circular" aria-label="Sair">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H5v14h4M14 8l4 4-4 4M18 12H9"/></svg>
+        </button>
+      </header>
+
+      <div class="secao-notas">
+        <div class="secao-notas__cabecalho">
+          <h2>Minhas pastas</h2>
+          <span id="totalPastas" class="contador"></span>
+        </div>
+        <ul id="pastas" class="cartao-lista lista-pastas"></ul>
       </div>
-      <p class="etiqueta" id="saudacao"></p>
-      <p class="etiqueta" id="estado"></p>
-    </div>
-  </header>
 
-  <main>
-
-    <!-- ETAPA 1 --------------------------------------------------------- -->
-    <section class="secao">
-      <h2 class="cabecalho-secao">Foto</h2>
-      <div class="grupo">
-
-        <label class="linha linha--acao" for="arquivo">
-          <span class="linha__icone" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                 stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7a1 1 0 0 0 .8-.4l1-1.3a1 1 0 0 1 .8-.4h4.4a1 1 0 0 1 .8.4l1 1.3a1 1 0 0 0 .8.4h1.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/>
-              <circle cx="12" cy="12.5" r="3.6"/>
-            </svg>
-          </span>
-          <span class="linha__texto">
-            <span class="linha__titulo">Escolher ou tirar foto</span>
-            <span class="linha__detalhe">No celular abre a c&acirc;mera direto</span>
-          </span>
-          <span class="linha__seta" aria-hidden="true">&rsaquo;</span>
+      <div class="barra-inferior">
+        <label class="busca-flutuante">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+          <input type="search" id="buscaPastas" placeholder="Buscar pastas">
         </label>
-        <input type="file" id="arquivo" accept="image/*" capture="environment" class="oculto-visual">
-
-      </div>
-
-      <div id="areaImagem" class="palco oculto">
-        <div class="palco__moldura">
-          <canvas id="tela"></canvas>
-        </div>
-
-        <div class="grupo">
-          <div class="linha linha--controle">
-            <span class="linha__titulo">Girar</span>
-            <button type="button" id="girar" class="botao botao--discreto">90&deg;</button>
-          </div>
-          <div class="linha linha--controle">
-            <label class="linha__titulo" for="contraste">Contraste</label>
-            <input type="range" id="contraste" min="0.5" max="2.5" step="0.05" value="1.3">
-          </div>
-          <div class="linha linha--controle">
-            <label class="linha__titulo" for="brilho">Brilho</label>
-            <input type="range" id="brilho" min="-60" max="60" step="2" value="0">
-          </div>
-          <div class="linha linha--controle">
-            <label class="linha__titulo" for="pretoBranco">Preto e branco</label>
-            <input type="checkbox" id="pretoBranco" class="chave" checked>
-          </div>
-        </div>
-        <p class="nota-rodape">Mais contraste ajuda a IA a acertar a letra.</p>
+        <button type="button" id="novaNotaPasta" class="controle-circular controle-circular--destaque" aria-label="Nova nota">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7"/><path d="m14 4 6 6M12 12l8-8"/></svg>
+        </button>
       </div>
     </section>
 
-    <!-- ETAPA 2 --------------------------------------------------------- -->
-    <section class="secao">
-      <h2 class="cabecalho-secao">Texto</h2>
-
-      <button type="button" id="ler" class="botao botao--principal" disabled>
-        <span class="botao__rotulo">Ler a letra da foto</span>
-        <span class="girador" aria-hidden="true"></span>
-      </button>
-      <p class="nota-rodape" id="statusLeitura"></p>
-
-      <div class="grupo grupo--campo">
-        <textarea id="texto" rows="12"
-          placeholder="O texto lido aparece aqui &mdash; d&aacute; pra corrigir antes de salvar."></textarea>
+    <section id="telaNotas" class="tela" hidden aria-labelledby="tituloPasta">
+      <header class="barra-navegacao">
+        <button type="button" id="voltarPastas" class="controle-circular" aria-label="Voltar para pastas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button type="button" id="maisNotas" class="controle-circular" aria-label="Mais op&ccedil;&otilde;es">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+        </button>
+      </header>
+      <div class="titulo-lista">
+        <p id="caminhoPasta">Pastas</p>
+        <h1 id="tituloPasta">Notas</h1>
+        <span id="contagemNotas"></span>
       </div>
-      <p class="nota-rodape">
-        O texto &eacute; o dado principal, guardado separado da imagem.
-        A letra &eacute; lida uma vez; o PDF pode ser gerado quantas vezes quiser.
-      </p>
+      <div id="lista" class="lista-notas"></div>
+
+      <div class="barra-inferior">
+        <label class="busca-flutuante">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+          <input type="search" id="busca" placeholder="Buscar">
+        </label>
+        <button type="button" id="novaNota" class="controle-circular controle-circular--destaque" aria-label="Nova nota">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7"/><path d="m14 4 6 6M12 12l8-8"/></svg>
+        </button>
+      </div>
     </section>
 
-    <!-- ETAPA 3 --------------------------------------------------------- -->
-    <section class="secao">
-      <h2 class="cabecalho-secao">Salvar</h2>
-      <div class="grupo">
-        <div class="linha linha--campo">
-          <label for="titulo">T&iacute;tulo</label>
-          <input type="text" id="titulo" placeholder="Derivadas &mdash; aula 3">
+    <section id="telaEditor" class="tela tela-editor" hidden aria-labelledby="titulo">
+      <header class="barra-navegacao barra-navegacao--editor">
+        <button type="button" id="voltarEditor" class="controle-circular" aria-label="Voltar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="acoes-editor">
+          <button type="button" id="maisEditor" class="controle-circular" aria-label="A&ccedil;&otilde;es da nota">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+          </button>
+          <button type="button" id="salvar" class="controle-circular controle-circular--concluir" disabled aria-label="Salvar nota">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+          </button>
         </div>
-        <div class="linha linha--campo">
-          <label for="assunto">Assunto</label>
-          <input type="text" id="assunto" list="assuntos" placeholder="C&aacute;lculo">
+      </header>
+
+      <div id="menuNota" class="menu-nota" hidden>
+        <button type="button" data-menu="pdf">Gerar PDF</button>
+        <button type="button" data-menu="mapa">Gerar mapa visual</button>
+        <button type="button" data-menu="foto">PDF com foto</button>
+        <button type="button" data-menu="apagar" class="menu-nota__destrutivo">Apagar nota</button>
+      </div>
+
+      <div class="editor-documento">
+        <p id="dataEditor" class="data-editor"></p>
+        <input type="text" id="titulo" class="campo-titulo" placeholder="T&iacute;tulo">
+        <div class="metadados-editor">
+          <label for="assunto">Pasta</label>
+          <input type="text" id="assunto" list="assuntos" placeholder="Sem assunto">
           <datalist id="assuntos"></datalist>
         </div>
-      </div>
-      <button type="button" id="salvar" class="botao botao--principal" disabled>Salvar nota</button>
-    </section>
+        <textarea id="texto" class="campo-nota" placeholder="Comece a escrever ou anexe uma foto..."></textarea>
 
-    <!-- ETAPA 4 --------------------------------------------------------- -->
-    <section class="secao">
-      <div class="cabecalho-secao cabecalho-secao--com-acao">
-        <h2>Minhas notas</h2>
-        <select id="filtro" class="seletor" aria-label="Filtrar por assunto">
-          <option value="">Todos os assuntos</option>
-        </select>
-      </div>
-      <ul id="lista" class="grupo lista"></ul>
-    </section>
+        <div id="resultadoAnalise" class="resultado-analise oculto" aria-live="polite">
+          <span class="ficha" id="tipoDetectado"></span>
+          <p id="incertezas"></p>
+        </div>
 
+        <div id="areaImagem" class="painel-foto oculto">
+          <div class="palco__moldura"><canvas id="tela"></canvas></div>
+          <div class="cartao-lista ajustes-foto">
+            <div class="linha linha--controle">
+              <span class="linha__titulo">Girar</span>
+              <button type="button" id="girar" class="botao botao--discreto">90&deg;</button>
+            </div>
+            <div class="linha linha--controle">
+              <label class="linha__titulo" for="contraste">Contraste</label>
+              <input type="range" id="contraste" min="0.5" max="2.5" step="0.05" value="1">
+            </div>
+            <div class="linha linha--controle">
+              <label class="linha__titulo" for="brilho">Brilho</label>
+              <input type="range" id="brilho" min="-60" max="60" step="2" value="0">
+            </div>
+            <div class="linha linha--controle">
+              <label class="linha__titulo" for="pretoBranco">Preto e branco</label>
+              <input type="checkbox" id="pretoBranco" class="chave">
+            </div>
+            <div class="linha linha--controle">
+              <label class="linha__titulo" for="formatoLeitura">Formato</label>
+              <select id="formatoLeitura" class="seletor">
+                <option value="automatico">Autom&aacute;tico</option>
+                <option value="texto">Texto comum</option>
+                <option value="mapa_mental">Mapa mental</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" id="ler" class="botao botao--principal" disabled>
+            <span class="botao__rotulo">Ler a foto com IA</span>
+            <span class="girador" aria-hidden="true"></span>
+          </button>
+          <p class="nota-rodape" id="statusLeitura"></p>
+        </div>
+      </div>
+
+      <div class="barra-editor">
+        <button type="button" id="mostrarFormato" class="ferramenta-editor" aria-label="Ajuda de formata&ccedil;&atilde;o"><span>Aa</span></button>
+        <label for="arquivo" class="ferramenta-editor ferramenta-editor--anexo" aria-label="Anexar ou fotografar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.4 11.6-8.9 8.9a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+        </label>
+        <input type="file" id="arquivo" accept="image/*" capture="environment" class="oculto-visual">
+        <span id="statusEditor" class="status-editor">Nota edit&aacute;vel</span>
+      </div>
+    </section>
   </main>
 
   <!-- Feedback de conclusao: aparece, informa, some. Nao bloqueia nada. -->

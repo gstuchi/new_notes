@@ -61,12 +61,11 @@ O `.env` está no `.gitignore` — ele nunca vai pro GitHub.
 
 ## Como usar
 
-1. **Foto** — escolha uma foto ou tire na hora (no celular abre a câmera direto).
-2. **Ajuste** — gire se estiver de lado, aumente o contraste, deixe em preto e
-   branco. Isso ajuda bastante a IA a acertar a letra.
-3. **Ler texto da foto** — a IA devolve o texto puro. Corrija o que ela errou.
-4. **Salvar** — dê um título e escolha o assunto (Cálculo, Física, Inglês...).
-5. **PDF** — na lista de baixo, cada nota tem os botões `PDF` e `PDF + foto`.
+1. **Pastas** — abra um assunto existente ou toque no botão laranja para criar uma nota.
+2. **Editor** — escreva normalmente ou use o clipe para escolher/tirar uma foto.
+3. **Leitura** — ajuste a imagem, escolha automático, texto ou mapa mental e toque em `Ler a foto com IA`.
+4. **Revisão** — corrija o texto, informe título e pasta e conclua no botão laranja.
+5. **Ações** — abra uma nota e use `…` para gerar PDF, mapa visual, PDF com foto ou apagar.
 
 ---
 
@@ -76,7 +75,7 @@ O `.env` está no `.gitignore` — ele nunca vai pro GitHub.
 npm test
 ```
 
-31 testes cobrem o gerador de PDF (estrutura, acentos, quebra de linha,
+35 testes cobrem o gerador de PDF (estrutura, acentos, quebra de linha,
 paginação, foto embutida), a física das molas da interface, o armazenamento e a
 escolha do provedor de Vision AI. Eles **não** chamam a API paga.
 
@@ -89,7 +88,7 @@ abrir e conferir com o olho.
 
 ```
 servidor.js              o servidor e as rotas da API
-lib/vision.js            chama a Vision AI e devolve TEXTO PURO
+lib/vision.js            chama a Vision AI e devolve texto + estrutura da página
 lib/pdf.js               gerador de PDF escrito na mão, sem biblioteca externa
 lib/armazenamento.js     salva/lê as notas e as fotos
 web/index.html           a estrutura da tela

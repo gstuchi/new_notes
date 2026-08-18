@@ -8,10 +8,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { gerarPdf, quebrarLinhas, larguraTexto, dimensoesJpeg } from '../lib/pdf.js';
+import { gerarPdf, quebrarLinhas, larguraTexto, dimensoesJpeg, mapaDoTexto } from '../lib/pdf.js';
 import { projetar, elastico, RastroDeVelocidade } from '../web/mola.js';
-import { listarNotas, salvarNota, buscarNota, atualizarNota, apagarNota, listarAssuntos } from '../lib/armazenamento.js';
-import { textoDaResposta, provedor, modelo, chaveConfigurada, lerCaligrafia } from '../lib/vision.js';
+import {
+  listarNotas, salvarNota, buscarNota, atualizarNota, apagarNota, listarAssuntos, lerImagem,
+} from '../lib/armazenamento.js';
+import {
+  textoDaResposta, analisarResposta, provedor, modelo, chaveConfigurada, lerCaligrafia,
+} from '../lib/vision.js';
 
 const RAIZ = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const SAIDA = path.join(RAIZ, 'testes', 'saida');
@@ -264,6 +268,27 @@ await teste('nota sem titulo/assunto ainda gera PDF', () => {
   validarPdf(gerarPdf({ texto: 'so texto' }));
 });
 
+await teste('mapa mental editado e reconstruido a partir do texto', () => {
+  const mapa = mapaDoTexto('# Claude\n\n## Configuracao\n- CLAUDE.md\n- Regras\n\n## Sessao\n- Plan mode');
+  assert.equal(mapa.temaCentral, 'Claude');
+  assert.equal(mapa.ramos.length, 2);
+  assert.deepEqual(mapa.ramos[0].itens, ['CLAUDE.md', 'Regras']);
+});
+
+await teste('PDF visual de mapa mental tem pagina paisagem e conexoes', () => {
+  const pdf = gerarPdf({
+    titulo: 'Claude',
+    assunto: 'Ferramentas',
+    tipo: 'mapa_mental',
+    texto: '# Claude\n\n## Configuracao\n- CLAUDE.md\n- Regras\n\n## Sessao\n- Plan mode',
+  }, { modo: 'mapa' });
+  validarPdf(pdf);
+  const conteudo = pdf.toString('latin1');
+  assert.ok(conteudo.includes('/MediaBox [0 0 841.89 595.28]'));
+  assert.ok(conteudo.includes(' l S'), 'mapa sem linhas de conexao');
+  assert.ok(conteudo.includes('0 g BT'), 'texto do mapa nao volta para preto');
+});
+
 // Guarda um PDF de verdade pra inspecao manual.
 await fs.writeFile(
   path.join(SAIDA, 'exemplo.pdf'),
@@ -281,6 +306,20 @@ await fs.writeFile(
   ),
 );
 
+await fs.writeFile(
+  path.join(SAIDA, 'mapa-exemplo.pdf'),
+  gerarPdf({
+    titulo: 'Claude Code',
+    assunto: 'Ferramentas',
+    tipo: 'mapa_mental',
+    texto: '# Claude e ferramentas\n\n'
+      + '## Arquivos\n- CLAUDE.md\n- .claude/rules\n- memory.md: memoria automatica\n\n'
+      + '## Contexto da sessao\n- Plan mode: planeja antes de agir\n'
+      + '- Permissoes: o que pode fazer sozinho\n- ~/.claude: preferencias',
+    criadaEm: new Date().toISOString(),
+  }, { modo: 'mapa' }),
+);
+
 // --- armazenamento ----------------------------------------------------------
 
 await teste('salva, busca, atualiza, lista por assunto e apaga', async () => {
@@ -290,16 +329,26 @@ await teste('salva, busca, atualiza, lista por assunto e apaga', async () => {
     titulo: 'Nota de teste',
     assunto: 'ZZ-Teste-Automatizado',
     texto: 'conteudo original',
+    tipo: 'mapa_mental',
+    estrutura: { temaCentral: 'Teste', ramos: [] },
+    incertezas: ['um trecho'],
     imagemBase64: jpegFalso(100, 100).toString('base64'),
   });
   assert.ok(nota.id, 'nota salva sem id');
   assert.equal(nota.assunto, 'ZZ-Teste-Automatizado');
+  assert.equal(nota.tipo, 'mapa_mental');
+  assert.deepEqual(nota.incertezas, ['um trecho']);
 
   const lida = await buscarNota(nota.id);
   assert.equal(lida.texto, 'conteudo original');
 
-  await atualizarNota(nota.id, { texto: 'conteudo corrigido' });
+  const fotoAtualizada = jpegFalso(240, 180);
+  await atualizarNota(nota.id, {
+    texto: 'conteudo corrigido',
+    imagemBase64: fotoAtualizada.toString('base64'),
+  });
   assert.equal((await buscarNota(nota.id)).texto, 'conteudo corrigido');
+  assert.deepEqual(await lerImagem(await buscarNota(nota.id)), fotoAtualizada);
 
   const assuntos = await listarAssuntos();
   assert.ok(assuntos.some((a) => a.nome === 'ZZ-Teste-Automatizado'));
@@ -403,6 +452,36 @@ await teste('resposta vazia ou estranha vira string vazia, nunca excecao', () =>
   assert.equal(textoDaResposta('texto solto'), '');
   assert.equal(textoDaResposta({}), '');
   assert.equal(textoDaResposta({ steps: 'nao e lista' }), '');
+});
+
+await teste('analise estruturada transforma mapa mental em texto editavel', () => {
+  const analise = analisarResposta(JSON.stringify({
+    tipo: 'mapa_mental',
+    tituloSugerido: 'Claude',
+    texto: 'nao deve ganhar da estrutura',
+    estrutura: {
+      temaCentral: 'Claude e ferramentas',
+      ramos: [{
+        titulo: 'Sessao',
+        itens: ['Plan mode', 'Permissoes'],
+        posicao: 'direita',
+        ordem: 1,
+      }],
+    },
+    incertezas: ['seta da direita'],
+  }));
+  assert.equal(analise.tipo, 'mapa_mental');
+  assert.ok(analise.texto.includes('## Sessao'));
+  assert.ok(analise.texto.includes('- Plan mode'));
+  assert.equal(analise.estrutura.ramos[0].posicao, 'direita');
+  assert.deepEqual(analise.incertezas, ['seta da direita']);
+});
+
+await teste('analise invalida falha sem transformar lixo em nota', () => {
+  assert.throws(
+    () => analisarResposta('isso nao e json'),
+    (erro) => erro.codigo === 'RESPOSTA_INVALIDA',
+  );
 });
 
 // --- resultado --------------------------------------------------------------

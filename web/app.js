@@ -29,19 +29,23 @@ window.addEventListener('pageshow', (evento) => {
 const estado = {
   imagemOriginal: null,
   giro: 0,
+  analise: null,
+  assuntoAtual: '',
+  notas: [],
+  editandoId: null,
+  telaAtual: 'telaPastas',
 };
 
 // ===========================================================================
 // MELHORIA DE IMAGEM (Fase 2)
 // ===========================================================================
 
-const LADO_MAXIMO = 1800; // foto gigante nao le melhor -- so pesa mais
+const LADO_MAXIMO = 2400; // preserva letra miuda e conexoes sem enviar arquivos gigantes
 
-function redesenhar() {
+function desenharEm(tela, comFiltros = true) {
   const img = estado.imagemOriginal;
-  if (!img) return;
+  if (!img) return null;
 
-  const tela = $('tela');
   const ctx = tela.getContext('2d', { willReadFrequently: true });
 
   const trocaLados = estado.giro % 180 !== 0;
@@ -63,7 +67,12 @@ function redesenhar() {
   ctx.drawImage(img, -l / 2, -a / 2, l, a);
   ctx.restore();
 
-  aplicarFiltros(ctx, largura, altura);
+  if (comFiltros) aplicarFiltros(ctx, largura, altura);
+  return tela;
+}
+
+function redesenhar() {
+  desenharEm($('tela'));
 }
 
 function aplicarFiltros(ctx, largura, altura) {
@@ -94,7 +103,15 @@ function aplicarFiltros(ctx, largura, altura) {
   ctx.putImageData(dados, 0, 0);
 }
 
-const imagemTratada = () => $('tela').toDataURL('image/jpeg', 0.9);
+const imagemTratada = () => $('tela').toDataURL('image/jpeg', 0.95);
+
+// A IA recebe a versao ajustada; o anexo guarda uma copia sem filtros para
+// que nenhum traco apagado pelo contraste se perca definitivamente.
+function imagemSemFiltros() {
+  const tela = document.createElement('canvas');
+  desenharEm(tela, false);
+  return tela.toDataURL('image/jpeg', 0.95);
+}
 
 $('arquivo').addEventListener('change', (evento) => {
   const arquivo = evento.target.files?.[0];
@@ -104,8 +121,11 @@ $('arquivo').addEventListener('change', (evento) => {
   img.onload = () => {
     estado.imagemOriginal = img;
     estado.giro = 0;
+    estado.analise = null;
+    $('resultadoAnalise').classList.add('oculto');
     $('areaImagem').classList.remove('oculto');
     $('ler').disabled = false;
+    $('statusEditor').textContent = 'Foto pronta para leitura';
     redesenhar();
     URL.revokeObjectURL(img.src);
   };
@@ -323,15 +343,35 @@ $('ler').addEventListener('click', async () => {
     const resposta = await fetch('/api/ler', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagem: imagemTratada() }),
+      body: JSON.stringify({
+        imagem: imagemTratada(),
+        formato: $('formatoLeitura').value,
+      }),
     });
     const dados = await resposta.json();
     if (!resposta.ok) throw new Error(dados.erro || 'Falha na leitura.');
 
     $('texto').value = dados.texto;
+    estado.analise = dados;
+    if (!$('titulo').value.trim() && dados.tituloSugerido) {
+      $('titulo').value = dados.tituloSugerido;
+    }
+    const nomesTipo = {
+      texto: 'Texto',
+      lista: 'Lista',
+      mapa_mental: 'Mapa mental',
+      tabela: 'Tabela',
+      misto: 'Conteudo misto',
+    };
+    $('tipoDetectado').textContent = nomesTipo[dados.tipo] || 'Texto';
+    $('incertezas').textContent = dados.incertezas?.length
+      ? `Confira: ${dados.incertezas.join('; ')}`
+      : 'Nenhum trecho incerto foi sinalizado pela IA.';
+    $('resultadoAnalise').classList.remove('oculto');
     status.className = 'nota-rodape nota-rodape--ok';
     status.textContent = 'Pronto. Confira e corrija o que a IA errou.';
-    brinde('Texto extraido da foto', 'ok');
+    $('statusEditor').textContent = dados.tipo === 'mapa_mental' ? 'Mapa mental reconhecido' : 'Texto reconhecido';
+    brinde('Pagina analisada', 'ok');
     atualizarBotaoSalvar();
     $('texto').focus({ preventScroll: true });
   } catch (erro) {
@@ -349,10 +389,21 @@ $('ler').addEventListener('click', async () => {
 // SALVAR (Fase 3/4)
 // ===========================================================================
 
+function fotografiaDoEditor() {
+  return JSON.stringify({
+    titulo: $('titulo').value,
+    assunto: $('assunto').value,
+    texto: $('texto').value,
+  });
+}
+
 function atualizarBotaoSalvar() {
   $('salvar').disabled = $('texto').value.trim() === '';
+  if (estado.editorInicial && fotografiaDoEditor() !== estado.editorInicial) {
+    $('statusEditor').textContent = 'Alteracoes nao salvas';
+  }
 }
-$('texto').addEventListener('input', atualizarBotaoSalvar);
+for (const id of ['texto', 'titulo', 'assunto']) $(id).addEventListener('input', atualizarBotaoSalvar);
 
 $('salvar').addEventListener('click', async () => {
   const botao = $('salvar');
@@ -364,11 +415,16 @@ $('salvar').addEventListener('click', async () => {
       titulo: $('titulo').value,
       assunto: $('assunto').value,
       texto: $('texto').value,
+      tipo: estado.analise?.tipo
+        || ($('formatoLeitura').value === 'mapa_mental' ? 'mapa_mental' : 'texto'),
+      estrutura: estado.analise?.estrutura || {},
+      incertezas: estado.analise?.incertezas || [],
     };
-    if (estado.imagemOriginal) corpo.imagem = imagemTratada();
+    if (estado.imagemOriginal) corpo.imagem = imagemSemFiltros();
 
-    const resposta = await fetch('/api/notas', {
-      method: 'POST',
+    const url = estado.editandoId ? `/api/notas/${estado.editandoId}` : '/api/notas';
+    const resposta = await fetch(url, {
+      method: estado.editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(corpo),
     });
@@ -376,8 +432,12 @@ $('salvar').addEventListener('click', async () => {
     if (!resposta.ok) throw new Error(dados.erro || 'Falha ao salvar.');
 
     brinde(`Salva em ${dados.assunto}`, 'ok');
+    estado.editandoId = dados.id;
+    estado.assuntoAtual = dados.assunto;
+    estado.editorInicial = fotografiaDoEditor();
     await carregarAssuntos();
     await carregarNotas();
+    navegar('telaNotas', -1);
   } catch (erro) {
     brinde(erro.message, 'erro');
   } finally {
@@ -392,103 +452,242 @@ $('salvar').addEventListener('click', async () => {
 
 async function carregarAssuntos() {
   const assuntos = await (await fetch('/api/assuntos')).json();
+  estado.assuntos = assuntos;
 
   $('assuntos').innerHTML = assuntos
     .map((a) => `<option value="${escapar(a.nome)}"></option>`)
     .join('');
 
-  const filtro = $('filtro');
-  const escolhido = filtro.value;
-  filtro.innerHTML = '<option value="">Todos os assuntos</option>'
-    + assuntos
-      .map((a) => `<option value="${escapar(a.nome)}">${escapar(a.nome)} (${a.quantidade})</option>`)
-      .join('');
-  filtro.value = escolhido;
+  renderizarPastas();
 }
 
-async function carregarNotas() {
-  const assunto = $('filtro').value;
-  const url = assunto ? `/api/notas?assunto=${encodeURIComponent(assunto)}` : '/api/notas';
-  const notas = await (await fetch(url)).json();
+function renderizarPastas() {
+  const termo = $('buscaPastas').value.trim().toLocaleLowerCase('pt-BR');
+  const assuntos = (estado.assuntos || []).filter(
+    (item) => !termo || item.nome.toLocaleLowerCase('pt-BR').includes(termo),
+  );
+  const total = (estado.assuntos || []).reduce((soma, item) => soma + item.quantidade, 0);
+  const todas = termo && !'todas as notas'.includes(termo) ? [] : [{ nome: '', quantidade: total }];
+  const itens = [...todas, ...assuntos];
 
-  const lista = $('lista');
+  $('totalPastas').textContent = `${estado.assuntos?.length || 0} pastas`;
+  $('pastas').innerHTML = itens.length ? itens.map((item) => `
+    <li class="pasta-item">
+      <button type="button" class="pasta-botao" data-assunto="${escapar(item.nome)}">
+        <span class="icone-pasta" aria-hidden="true">
+          <svg viewBox="0 0 24 20"><path d="M2 5.5h7l2-2h4l2 2h5v12.5H2z"/></svg>
+        </span>
+        <span class="pasta-nome">${item.nome ? escapar(item.nome) : 'Todas as notas'}</span>
+        <span class="pasta-quantidade">${item.quantidade}</span>
+        <span class="pasta-seta" aria-hidden="true">›</span>
+      </button>
+    </li>
+  `).join('') : '<li class="lista-vazia">Nenhuma pasta encontrada.</li>';
+}
+
+function nomeDoGrupo(iso) {
+  const data = new Date(iso);
+  const agora = new Date();
+  const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const inicioData = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const dias = Math.floor((inicioHoje - inicioData) / 86400000);
+  if (dias === 0) return 'Hoje';
+  if (dias === 1) return 'Ontem';
+  if (dias < 7) return 'Ultimos 7 dias';
+  if (dias < 30) return 'Ultimos 30 dias';
+  return data.toLocaleDateString('pt-BR', { month: 'long', year: data.getFullYear() === agora.getFullYear() ? undefined : 'numeric' });
+}
+
+function renderizarNotas() {
+  const termo = $('busca').value.trim().toLocaleLowerCase('pt-BR');
+  const notas = estado.notas.filter((nota) => {
+    const busca = `${nota.titulo} ${nota.previa} ${nota.assunto}`.toLocaleLowerCase('pt-BR');
+    return !termo || busca.includes(termo);
+  });
+  $('contagemNotas').textContent = `${notas.length} ${notas.length === 1 ? 'nota' : 'notas'}`;
   if (notas.length === 0) {
-    lista.innerHTML = '<li class="lista__vazia">Nenhuma nota ainda.</li>';
+    $('lista').innerHTML = '<div class="cartao-lista lista-vazia">Nenhuma nota encontrada.</div>';
     return;
   }
 
-  lista.innerHTML = notas.map((nota) => `
-    <li class="lista__item" data-id="${nota.id}">
-      <span class="lista__titulo">${escapar(nota.titulo)}</span>
-      <span class="lista__acoes">
-        <button type="button" class="botao botao--discreto" data-acao="pdf">PDF</button>
-        ${nota.temFoto
-          ? '<button type="button" class="botao botao--discreto" data-acao="pdf-foto">+ foto</button>'
-          : ''}
-        <button type="button" class="botao botao--discreto" data-acao="apagar"
-                aria-label="Apagar ${escapar(nota.titulo)}">Apagar</button>
-      </span>
-      <span class="lista__meta">
-        <span class="ficha">${escapar(nota.assunto)}</span>
-        <span>${formatarData(nota.criadaEm)}</span>
-      </span>
-      <p class="lista__previa">${escapar(nota.previa)}</p>
-    </li>
+  const grupos = new Map();
+  for (const nota of notas) {
+    const nome = nomeDoGrupo(nota.criadaEm);
+    if (!grupos.has(nome)) grupos.set(nome, []);
+    grupos.get(nome).push(nota);
+  }
+  $('lista').innerHTML = [...grupos.entries()].map(([nome, itens]) => `
+    <section class="grupo-data">
+      <h2>${escapar(nome)}</h2>
+      <ul class="cartao-lista">
+        ${itens.map((nota) => `
+          <li class="nota-item">
+            <button type="button" class="nota-botao" data-id="${nota.id}">
+              <span class="nota-titulo">${escapar(nota.titulo)}</span>
+              ${nota.tipo === 'mapa_mental' ? '<span class="nota-tipo">Mapa</span>' : ''}
+              <p class="nota-previa">${escapar(nota.previa || 'Nota sem previa')}</p>
+            </button>
+          </li>
+        `).join('')}
+      </ul>
+    </section>
   `).join('');
 }
 
-$('lista').addEventListener('click', async (evento) => {
-  const botao = evento.target.closest('button[data-acao]');
+async function carregarNotas() {
+  const url = estado.assuntoAtual
+    ? `/api/notas?assunto=${encodeURIComponent(estado.assuntoAtual)}`
+    : '/api/notas';
+  estado.notas = await (await fetch(url)).json();
+  $('tituloPasta').textContent = estado.assuntoAtual || 'Todas as notas';
+  $('caminhoPasta').textContent = 'Pastas';
+  renderizarNotas();
+}
+
+// ===========================================================================
+// NAVEGACAO ENTRE PASTAS, NOTAS E EDITOR
+// ===========================================================================
+
+function navegar(id, direcao = 1) {
+  if (estado.telaAtual === id) return;
+  const anterior = $(estado.telaAtual);
+  const proxima = $(id);
+  proxima.hidden = false;
+  const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduzido && typeof proxima.animate === 'function') {
+    proxima.classList.add('tela--entrando');
+    proxima.animate(
+      [{ transform: `translateX(${direcao * 14}%)`, opacity: 0.5 }, { transform: 'translateX(0)', opacity: 1 }],
+      { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+    ).finished.finally(() => proxima.classList.remove('tela--entrando'));
+    anterior.animate(
+      [{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${direcao * -7}%)`, opacity: 0.25 }],
+      { duration: 240, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+    ).finished.finally(() => { anterior.hidden = true; });
+  } else {
+    anterior.hidden = true;
+  }
+  estado.telaAtual = id;
+  proxima.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function limparEditor() {
+  estado.editandoId = null;
+  estado.imagemOriginal = null;
+  estado.analise = null;
+  $('titulo').value = '';
+  $('assunto').value = estado.assuntoAtual;
+  $('texto').value = '';
+  $('arquivo').value = '';
+  $('areaImagem').classList.add('oculto');
+  $('resultadoAnalise').classList.add('oculto');
+  $('menuNota').hidden = true;
+  $('maisEditor').disabled = true;
+  $('dataEditor').textContent = new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  $('statusEditor').textContent = 'Nova nota';
+  estado.editorInicial = fotografiaDoEditor();
+  atualizarBotaoSalvar();
+}
+
+function abrirEditorNovo() {
+  estado.origemEditor = estado.telaAtual;
+  limparEditor();
+  navegar('telaEditor', 1);
+  setTimeout(() => $('texto').focus({ preventScroll: true }), 220);
+}
+
+async function abrirNota(id) {
+  const resposta = await fetch(`/api/notas/${id}`);
+  const nota = await resposta.json();
+  if (!resposta.ok) return brinde(nota.erro || 'Nao deu pra abrir a nota', 'erro');
+  estado.origemEditor = estado.telaAtual;
+  estado.editandoId = nota.id;
+  estado.imagemOriginal = null;
+  estado.analise = {
+    tipo: nota.tipo || 'texto',
+    estrutura: nota.estrutura || {},
+    incertezas: nota.incertezas || [],
+  };
+  $('titulo').value = nota.titulo;
+  $('assunto').value = nota.assunto;
+  $('texto').value = nota.texto;
+  $('areaImagem').classList.add('oculto');
+  $('resultadoAnalise').classList.add('oculto');
+  $('menuNota').hidden = true;
+  $('maisEditor').disabled = false;
+  $('dataEditor').textContent = new Date(nota.criadaEm).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  $('statusEditor').textContent = nota.tipo === 'mapa_mental' ? 'Mapa mental' : 'Nota salva';
+  estado.editorInicial = fotografiaDoEditor();
+  atualizarBotaoSalvar();
+  navegar('telaEditor', 1);
+}
+
+async function sairDoEditor() {
+  if (estado.editorInicial !== fotografiaDoEditor()) {
+    const descartar = await abrirFolha({
+      titulo: 'Descartar alteracoes?',
+      texto: 'As mudancas feitas nesta nota ainda nao foram salvas.',
+      confirmar: 'Descartar',
+    });
+    if (!descartar) return;
+  }
+  navegar(estado.origemEditor || 'telaNotas', -1);
+}
+
+$('pastas').addEventListener('click', async (evento) => {
+  const botao = evento.target.closest('[data-assunto]');
   if (!botao) return;
+  estado.assuntoAtual = botao.dataset.assunto;
+  await carregarNotas();
+  navegar('telaNotas', 1);
+});
+$('lista').addEventListener('click', (evento) => {
+  const botao = evento.target.closest('[data-id]');
+  if (botao) abrirNota(botao.dataset.id);
+});
+$('voltarPastas').addEventListener('click', () => navegar('telaPastas', -1));
+$('voltarEditor').addEventListener('click', sairDoEditor);
+$('novaNota').addEventListener('click', abrirEditorNovo);
+$('novaNotaPasta').addEventListener('click', () => {
+  estado.assuntoAtual = '';
+  abrirEditorNovo();
+});
+$('buscaPastas').addEventListener('input', renderizarPastas);
+$('busca').addEventListener('input', renderizarNotas);
+$('maisNotas').addEventListener('click', () => brinde(`${estado.notas.length} notas nesta pasta`, 'aviso'));
+$('mostrarFormato').addEventListener('click', () => {
+  brinde('Mapa: # tema, ## ramo e - item', 'aviso', 4200);
+});
 
-  const item = botao.closest('li');
-  const id = item.dataset.id;
-  const titulo = item.querySelector('.lista__titulo').textContent;
-
-  if (botao.dataset.acao === 'pdf') {
-    window.open(`/api/notas/${id}/pdf`, '_blank');
-    return;
-  }
-  if (botao.dataset.acao === 'pdf-foto') {
-    window.open(`/api/notas/${id}/pdf?foto=1`, '_blank');
-    return;
-  }
-  if (botao.dataset.acao === 'apagar') {
+$('maisEditor').addEventListener('click', () => {
+  if (!estado.editandoId) return;
+  $('menuNota').hidden = !$('menuNota').hidden;
+  const nota = estado.notas.find((item) => item.id === estado.editandoId);
+  $('menuNota').querySelector('[data-menu="mapa"]').hidden = nota?.tipo !== 'mapa_mental';
+  $('menuNota').querySelector('[data-menu="foto"]').hidden = !nota?.temFoto;
+});
+$('menuNota').addEventListener('click', async (evento) => {
+  const acao = evento.target.closest('[data-menu]')?.dataset.menu;
+  if (!acao || !estado.editandoId) return;
+  $('menuNota').hidden = true;
+  if (acao === 'pdf') return window.open(`/api/notas/${estado.editandoId}/pdf`, '_blank');
+  if (acao === 'mapa') return window.open(`/api/notas/${estado.editandoId}/pdf?formato=mapa`, '_blank');
+  if (acao === 'foto') return window.open(`/api/notas/${estado.editandoId}/pdf?foto=1`, '_blank');
+  if (acao === 'apagar') {
     const confirmado = await abrirFolha({
       titulo: 'Apagar esta nota?',
-      texto: `"${titulo}" some para sempre. Nao da pra desfazer.`,
+      texto: `"${$('titulo').value}" some para sempre. Nao da pra desfazer.`,
       confirmar: 'Apagar',
     });
     if (!confirmado) return;
-
-    const resposta = await fetch(`/api/notas/${id}`, { method: 'DELETE' });
-    if (!resposta.ok) {
-      brinde('Nao deu pra apagar', 'erro');
-      return;
-    }
+    const resposta = await fetch(`/api/notas/${estado.editandoId}`, { method: 'DELETE' });
+    if (!resposta.ok) return brinde('Nao deu pra apagar', 'erro');
     brinde('Nota apagada', 'aviso');
     await carregarAssuntos();
     await carregarNotas();
+    navegar('telaNotas', -1);
   }
 });
-
-$('filtro').addEventListener('change', carregarNotas);
-
-// ===========================================================================
-// BORDA DE ROLAGEM
-// A camada translucida so ganha sombra quando ha conteudo passando por
-// baixo dela. Divisoria permanente e ruido visual.
-// ===========================================================================
-
-let rolagemAgendada = false;
-addEventListener('scroll', () => {
-  if (rolagemAgendada) return;
-  rolagemAgendada = true;
-  requestAnimationFrame(() => {
-    rolagemAgendada = false;
-    $('chrome').dataset.rolado = scrollY > 4 ? 'sim' : 'nao';
-  });
-}, { passive: true });
 
 // ===========================================================================
 // UTILIDADES

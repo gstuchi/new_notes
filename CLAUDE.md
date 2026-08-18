@@ -27,10 +27,10 @@ Não há lint configurado. Node >= 20, ESM (`"type": "module"`).
 ## Mapa do código
 
 - `servidor.js` — servidor HTTP sem framework, rotas da API, carrega `.env` na mão. Escuta só em `127.0.0.1`. Limite de corpo 25 MB.
-- `lib/vision.js` — única chamada à Vision AI; devolve **texto puro** e nada mais. Dois provedores atrás da mesma função, ver seção abaixo.
+- `lib/vision.js` — única chamada à Vision AI; devolve texto editável, tipo da página e estrutura visual. Dois provedores atrás da mesma função, ver seção abaixo.
 - `lib/pdf.js` — gerador de PDF 1.4 escrito à mão (fontes base-14 Helvetica, WinAnsi). Sem dependência externa. Embute a foto original como `DCTDecode` sem decodificar o JPEG.
 - `lib/armazenamento.js` — notas em `dados/notas.json`, fotos em `dados/imagens/`. `dados/` está no `.gitignore` — o estado local nunca é versionado.
-- `web/app.js` — tela principal: melhoria de imagem via canvas (giro, contraste, brilho, P&B) antes de enviar, folha arrastável, lista por assunto
+- `web/app.js` — navegação Pastas → Notas → Editor, busca local, edição, melhoria de imagem via canvas e folha arrastável
 - `web/mola.js` — motor de molas próprio (integração rAF), projeção de momento e elástico de borda. Sem dependência.
 - `web/autenticacao.js` + `web/entrada.js` + `login.html` + `cadastro.html` — **mockup de login**, ver seção abaixo.
 
@@ -43,16 +43,16 @@ Não há lint configurado. Node >= 20, ESM (`"type": "module"`).
 | Rota | Método | O que faz |
 | --- | --- | --- |
 | `/api/estado` | GET | `{ chaveConfigurada, provedor, modelo }` — a interface usa pra avisar que a leitura vai falhar |
-| `/api/ler` | POST | `{ imagem }` (data URL ou base64 puro) → `{ texto }`. Única rota que gasta dinheiro |
+| `/api/ler` | POST | `{ imagem, formato }` → `{ tipo, texto, estrutura, incertezas }`. Única rota que gasta dinheiro |
 | `/api/assuntos` | GET | lista de assuntos com contagem |
 | `/api/notas` | GET/POST | listagem (só prévia de 160 caracteres, filtro `?assunto=`) e criação |
 | `/api/notas/:id` | GET/PUT/DELETE | nota inteira |
-| `/api/notas/:id/pdf` | GET | PDF; `?foto=1` embute a foto original |
+| `/api/notas/:id/pdf` | GET | PDF; `?foto=1` anexa a foto e `?formato=mapa` inclui o mapa visual |
 | `/api/notas/:id/foto` | GET | JPEG original |
 
 ## Vision AI: dois provedores, uma função
 
-`lerCaligrafia(base64, tipoMime) -> string` é tudo que o resto do projeto conhece. Por baixo:
+`analisarAnotacao(base64, tipoMime, formato) -> análise` é a entrada principal. `lerCaligrafia()` permanece como compatibilidade para consumidores que precisam apenas da string. Por baixo:
 
 - **Gemini** (`fetch` direto, sem SDK) se houver `GEMINI_API_KEY`; **Anthropic** (`@anthropic-ai/sdk`) se houver `ANTHROPIC_API_KEY`. Com as duas, Gemini ganha (tem cota gratuita). `PROVEDOR_VISION=gemini|anthropic` força na mão.
 - Modelos padrão: `gemini-3.6-flash` / `claude-opus-5`. `MODELO_VISION` sobrescreve os dois.
@@ -93,7 +93,7 @@ Pipeline: foto → melhoria de imagem (corte/contraste/endireitar) → leitura d
 
 ## Decisões de arquitetura já tomadas (respeitar)
 
-**Separação texto x aparência.** A Vision AI devolve TEXTO PURO, sem formatação. Esse texto é o dado canônico e deve ser persistido separado da renderização. Estilos são templates de PDF aplicados sobre esse texto. Consequência prática: ler a caligrafia uma vez, estilizar N vezes — nunca acoplar a chamada da Vision AI à geração do PDF, nem re-chamar a API para trocar de estilo.
+**Separação conteúdo x aparência.** A Vision AI devolve texto editável e uma estrutura semântica para páginas não lineares. O texto continua sendo a fonte revisável; a estrutura preserva relações como os ramos de mapas mentais. Ambos são persistidos separados da renderização. Consequência prática: ler a caligrafia uma vez, estilizar N vezes — nunca acoplar a chamada da Vision AI à geração do PDF, nem re-chamar a API para trocar de estilo.
 
 **ASSUNTOS são organização pura, não IA.** Pastas/agrupamento é código comum. Não usar modelo para classificar assunto.
 

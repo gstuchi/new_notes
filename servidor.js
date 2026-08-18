@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { lerCaligrafia, chaveConfigurada, provedor, modelo } from './lib/vision.js';
+import { analisarAnotacao, chaveConfigurada, provedor, modelo } from './lib/vision.js';
 import { gerarPdf } from './lib/pdf.js';
 import {
   listarNotas, buscarNota, salvarNota, atualizarNota,
@@ -123,14 +123,14 @@ async function rotear(req, res) {
     });
   }
 
-  // Fase 1: ler a foto e devolver texto puro.
+  // Analisa a foto e preserva texto, tipo e relacoes visuais.
   if (caminho === '/api/ler' && metodo === 'POST') {
     const corpo = await lerCorpo(req);
     const { tipoMime, base64 } = separarDataUrl(corpo.imagem);
     if (!base64) return responderJson(res, 400, { erro: 'Nenhuma imagem enviada.' });
     try {
-      const texto = await lerCaligrafia(base64, tipoMime);
-      return responderJson(res, 200, { texto });
+      const analise = await analisarAnotacao(base64, tipoMime, corpo.formato);
+      return responderJson(res, 200, analise);
     } catch (erro) {
       const status = erro.codigo === 'SEM_CHAVE' ? 503 : 502;
       return responderJson(res, status, { erro: erro.message, codigo: erro.codigo || null });
@@ -153,6 +153,7 @@ async function rotear(req, res) {
       assunto: n.assunto,
       criadaEm: n.criadaEm,
       temFoto: Boolean(n.arquivoImagem),
+      tipo: n.tipo || 'texto',
       previa: n.texto.slice(0, 160),
     })));
   }
@@ -167,6 +168,9 @@ async function rotear(req, res) {
       titulo: corpo.titulo,
       assunto: corpo.assunto,
       texto: corpo.texto,
+      tipo: corpo.tipo,
+      estrutura: corpo.estrutura,
+      incertezas: corpo.incertezas,
       imagemBase64: base64 || null,
     });
     return responderJson(res, 201, nota);
@@ -183,7 +187,11 @@ async function rotear(req, res) {
     }
     if (metodo === 'PUT') {
       const corpo = await lerCorpo(req);
-      const nota = await atualizarNota(id, corpo);
+      const { base64 } = separarDataUrl(corpo.imagem);
+      const nota = await atualizarNota(id, {
+        ...corpo,
+        imagemBase64: base64 || undefined,
+      });
       return nota
         ? responderJson(res, 200, nota)
         : responderJson(res, 404, { erro: 'Nota nao encontrada.' });
@@ -204,7 +212,8 @@ async function rotear(req, res) {
 
     const comFoto = url.searchParams.get('foto') === '1';
     const foto = comFoto ? await lerImagem(nota) : null;
-    const pdf = gerarPdf(nota, { foto });
+    const modo = url.searchParams.get('formato') === 'mapa' ? 'mapa' : 'resumo';
+    const pdf = gerarPdf(nota, { foto, modo });
 
     const nomeArquivo = `${nota.assunto} - ${nota.titulo}`
       .replace(/[^\p{L}\p{N} .-]/gu, '_')
