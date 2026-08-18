@@ -279,7 +279,7 @@ Four details that separate a good drag from a bad one:
 - **Pointer capture** once the drag starts, so it continues when the pointer leaves the element's bounds.
 - **Multi-touch protection** — `if (isDragging) return` on new touch points, or switching fingers mid-drag makes the element jump.
 - **Damping past boundaries** — dragging beyond a natural edge moves the element less the further it goes. Real things slow before they stop.
-- **Friction, not a wall** — allow the over-drag with rising resistance rather than refusing it.
+- **Friction, not a wall** — allow the over-drag with rising resistance rather than refusing it
 
 Settle with a spring so an interrupted drag keeps its velocity:
 
