@@ -19,7 +19,7 @@ const PORTA = Number(process.env.PORTA) || 3000;
 const LIMITE_CORPO = 25 * 1024 * 1024; // 25 MB
 
 // --- .env simples (sem dependencia) ----------------------------------------
-async function carregarEnv() {
+export async function carregarEnv() {
   try {
     const bruto = await fs.readFile(path.join(RAIZ, '.env'), 'utf8');
     for (const linha of bruto.split(/\r?\n/)) {
@@ -103,7 +103,7 @@ function separarDataUrl(valor) {
 }
 
 // --- rotas ------------------------------------------------------------------
-async function rotear(req, res) {
+export async function rotear(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const caminho = url.pathname;
   const metodo = req.method;
@@ -238,24 +238,28 @@ async function rotear(req, res) {
   return responderJson(res, 404, { erro: 'Rota nao encontrada.' });
 }
 
-// --- sobe o servidor --------------------------------------------------------
-await carregarEnv();
+// --- sobe o servidor somente no desenvolvimento local ----------------------
+const executadoDiretamente = process.argv[1]
+  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
-const servidor = http.createServer((req, res) => {
-  rotear(req, res).catch((erro) => {
-    console.error(erro);
-    if (!res.headersSent) {
-      responderJson(res, erro.status || 500, { erro: erro.message || 'Erro interno.' });
-    }
+if (executadoDiretamente) {
+  await carregarEnv();
+  const servidor = http.createServer((req, res) => {
+    rotear(req, res).catch((erro) => {
+      console.error(erro);
+      if (!res.headersSent) {
+        responderJson(res, erro.status || 500, { erro: erro.message || 'Erro interno.' });
+      }
+    });
   });
-});
 
-servidor.listen(PORTA, '127.0.0.1', () => {
-  console.log('');
-  console.log('  Notas -> PDF rodando em  http://localhost:' + PORTA);
-  console.log('  Vision AI: ' + (chaveConfigurada()
-    ? 'chave configurada (' + (process.env.MODELO_VISION || 'claude-opus-5') + ')'
-    : 'SEM CHAVE -- da pra usar o app, mas a leitura da foto vai falhar.'));
-  console.log('  Para parar: Ctrl+C');
-  console.log('');
-});
+  servidor.listen(PORTA, '127.0.0.1', () => {
+    console.log('');
+    console.log('  Notas -> PDF rodando em  http://localhost:' + PORTA);
+    console.log('  Vision AI: ' + (chaveConfigurada()
+      ? 'chave configurada (' + (process.env.MODELO_VISION || 'claude-opus-5') + ')'
+      : 'SEM CHAVE -- da pra usar o app, mas a leitura da foto vai falhar.'));
+    console.log('  Para parar: Ctrl+C');
+    console.log('');
+  });
+}

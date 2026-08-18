@@ -39,6 +39,16 @@ O caminho que a foto percorre até virar PDF:
 
 A interface organiza o fluxo em **Pastas → Notas → Editor**, inspirada no Apple Notes em modo escuro, com o laranja-terra do Claude como cor de ação.
 
+## Publicar na Vercel
+
+1. Importe este repositorio na Vercel.
+2. Em **Storage**, crie um **Blob privado** e conecte-o ao projeto. Isso configura `BLOB_READ_WRITE_TOKEN` automaticamente.
+3. Em **Settings → Environment Variables**, adicione `GEMINI_API_KEY` ou `ANTHROPIC_API_KEY`.
+4. Execute um novo deploy.
+
+Na maquina local, sem `BLOB_READ_WRITE_TOKEN`, o app continua usando `dados/`.
+Na Vercel, notas e fotos sao persistidas no Blob privado.
+
 ---
 
 ## 🧠 Por que Vision AI (e não OCR tradicional)

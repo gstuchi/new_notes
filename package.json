@@ -9,7 +9,8 @@
     "test": "node testes/teste.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.0"
+    "@anthropic-ai/sdk": "^0.70.0",
+    "@vercel/blob": "^2.3.0"
   },
   "engines": {
     "node": ">=20"

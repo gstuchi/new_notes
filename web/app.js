@@ -40,7 +40,7 @@ const estado = {
 // MELHORIA DE IMAGEM (Fase 2)
 // ===========================================================================
 
-const LADO_MAXIMO = 2400; // preserva letra miuda e conexoes sem enviar arquivos gigantes
+const LADO_MAXIMO = 1800; // mantem o JSON com base64 dentro do limite das funcoes da Vercel
 
 function desenharEm(tela, comFiltros = true) {
   const img = estado.imagemOriginal;
@@ -103,14 +103,14 @@ function aplicarFiltros(ctx, largura, altura) {
   ctx.putImageData(dados, 0, 0);
 }
 
-const imagemTratada = () => $('tela').toDataURL('image/jpeg', 0.95);
+const imagemTratada = () => $('tela').toDataURL('image/jpeg', 0.86);
 
 // A IA recebe a versao ajustada; o anexo guarda uma copia sem filtros para
 // que nenhum traco apagado pelo contraste se perca definitivamente.
 function imagemSemFiltros() {
   const tela = document.createElement('canvas');
   desenharEm(tela, false);
-  return tela.toDataURL('image/jpeg', 0.95);
+  return tela.toDataURL('image/jpeg', 0.86);
 }
 
 $('arquivo').addEventListener('change', (evento) => {
